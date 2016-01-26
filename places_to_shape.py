@@ -24,11 +24,7 @@ def get_latlng(place):
         return None
 
 
-def store_shape(placeDic):
-    # current file location
-    path = os.path.dirname(os.path.realpath(__file__))+"/"
-    # remove shapefile
-    remove_shape(path, 'places')
+def store_shape(path, placeDic):
     spatialReference = osr.SpatialReference()
     spatialReference.ImportFromEPSG(4326)  # WGS84 degrees coordinates
     # will select the driver for our shp-file creation.
@@ -58,11 +54,11 @@ def store_shape(placeDic):
     shapeData.Destroy()  # lets close the shapefile
 
 
-def remove_shape(path, fileName):
+def remove_shape(path, file_name):
     # removes the exsisting shapefile
     extensions = ["shp", "shx", "prj", "dbf"]
     for extension in extensions:
-        command = "rm "+path+fileName+"."+extension
+        command = "rm " + path + file_name + "." + extension
         os.system(command)
 
 
@@ -72,17 +68,29 @@ def read_txt(txt_file):
 
 
 def places_to_shape():
-    # dictionary where all the coordinates and places will be stored in
+    # files and paths
+    # current file location
+    path = os.path.dirname(os.path.realpath(__file__)) + "/"
     txt_file = "places.txt"
+
+    # dictionary where all the coordinates and places will be stored in
     placeDic = {}
+
+    # read from source
     places = read_txt(txt_file)
+
+    # main loop
     for place in places:
         place = place.strip()
         latlng = get_latlng(place)
         print place, latlng
         placeDic[place] = latlng
 
-    store_shape(placeDic)
+    # remove shape, if exists
+    remove_shape(path, txt_file[:-4])
+
+    # store results
+    store_shape(path, placeDic)
 
 
 if __name__ == "__main__":
