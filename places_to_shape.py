@@ -11,6 +11,16 @@ from osgeo import osr
 
 
 def get_latlng(place):
+    """Get lattitude longitude dictionary for `place` from Google web api.
+
+    Args:
+        place (str): place to get coordinates for
+
+    Returns:
+        dictionary with keys `lat` and `lng` with corresponding values when
+        status code is `200`, returns `None` if status code does not equal
+        `200`
+    """
     # Fetches coordinates from the google api
     url = "http://maps.googleapis.com/maps/api/geocode/json?address={}".format(
         place)
@@ -24,7 +34,14 @@ def get_latlng(place):
         return None
 
 
-def store_shape(path, placeDic):
+def store_shape(path, shape_name, placeDic):
+    """Stores `placeDic` as ESRI Shapefile at `path`
+
+    Args:
+        path (str): path to store shapefile at
+        placeDic (dict): dictionary which looks like
+            {'<placename': {'lat': <lat>}, 'lng': <lng> }
+    """
     spatialReference = osr.SpatialReference()
     spatialReference.ImportFromEPSG(4326)  # WGS84 degrees coordinates
     # will select the driver for our shp-file creation.
@@ -33,7 +50,7 @@ def store_shape(path, placeDic):
     shapeData = driver.CreateDataSource(path)
     # this will create a corresponding layer for our data with given
     # spatial information.
-    layer = shapeData.CreateLayer('places', spatialReference, ogr.wkbPoint)
+    layer = shapeData.CreateLayer(shape_name, spatialReference, ogr.wkbPoint)
     # gets parameters of the current shapefile
     layer_defn = layer.GetLayerDefn()
     new_field = ogr.FieldDefn('PLACE', ogr.OFTString)
@@ -55,6 +72,12 @@ def store_shape(path, placeDic):
 
 
 def remove_shape(path, file_name):
+    """Removes shapefile `filename` at `path`.
+
+    Args:
+        path (str): path the shapefile is stored at
+        file_name (str): name of shapefile
+    """
     # removes the exsisting shapefile
     extensions = ["shp", "shx", "prj", "dbf"]
     for extension in extensions:
@@ -63,15 +86,27 @@ def remove_shape(path, file_name):
 
 
 def read_txt(txt_file):
+    """Read a text file and return lines as list.
+
+    Args:
+        txt_file (str): path to file to read
+
+    Returns:
+        list with lines of file as items.
+    """
     with open(txt_file) as f:
         return f.readlines()
 
 
 def places_to_shape():
+    """Read text file with place names, get coordinates from google and
+    write as shapefile.
+    """
     # files and paths
     # current file location
     path = os.path.dirname(os.path.realpath(__file__)) + "/"
     txt_file = "places.txt"
+    txt_file_root = txt_file[:-4]
 
     # dictionary where all the coordinates and places will be stored in
     placeDic = {}
@@ -87,10 +122,10 @@ def places_to_shape():
         placeDic[place] = latlng
 
     # remove shape, if exists
-    remove_shape(path, txt_file[:-4])
+    remove_shape(path, txt_file_root)
 
     # store results
-    store_shape(path, placeDic)
+    store_shape(path, txt_file_root, placeDic)
 
 
 if __name__ == "__main__":
