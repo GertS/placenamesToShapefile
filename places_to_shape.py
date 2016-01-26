@@ -12,13 +12,16 @@ from osgeo import osr
 
 def get_latlng(place):
     # Fetches coordinates from the google api
-    url = "http://maps.googleapis.com/maps/api/geocode/json?address="+place
+    url = "http://maps.googleapis.com/maps/api/geocode/json?address={}".format(
+        place)
     response = urllib2.urlopen(url)
     jsonF = json.loads(response.read())
     if jsonF['status'] == "OK":
         lat = jsonF['results'][0]['geometry']['location']['lat']
         lng = jsonF['results'][0]['geometry']['location']['lng']
-        return lat, lng
+        return {'lat': lat, 'lng': lng}
+    else:
+        return None
 
 
 def store_shape(placeDic):
@@ -75,9 +78,9 @@ def places_to_shape():
     places = read_txt(txt_file)
     for place in places:
         place = place.strip()
-        lat, lng = get_latlng(place)
-        print place, lat, lng
-        placeDic[place] = {'lat': lat, 'lng': lng}
+        latlng = get_latlng(place)
+        print place, latlng
+        placeDic[place] = latlng
 
     store_shape(placeDic)
 
