@@ -62,7 +62,8 @@ def remove_shape(path, fileName):
         command = "rm "+path+fileName+"."+extension
         os.system(command)
 
-if __name__ == "__main__":
+
+def places_to_shape():
     # dictionary where all the coordinates and places will be stored in
     placeDic = {}
     with open("places.txt") as f:
@@ -74,7 +75,7 @@ if __name__ == "__main__":
                     'lat': lat,
                     'lng': lng}
     store_shape(placeDic)
-    try:  # show the result in qgis
-        os.system("qgis places.shp")
-    except:
-        pass
+
+
+if __name__ == "__main__":
+    places_to_shape()
