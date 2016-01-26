@@ -4,3 +4,6 @@
 *.shx
 *.qml
 *.sld
+
+# vim backup files
+*.swp
