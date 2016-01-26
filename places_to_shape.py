@@ -2,12 +2,12 @@
 # Gert Sterenborg; gertsterenborg@gmail.com
 # 21-01-2015
 
-import json
 import os
-import urllib2
 
-from osgeo import ogr
-from osgeo import osr
+import requests
+from fiona import collection
+from shapely.geometry import Point
+from shapely.geometry import mapping
 
 
 def get_latlng(place):
@@ -24,8 +24,8 @@ def get_latlng(place):
     # Fetches coordinates from the google api
     url = "http://maps.googleapis.com/maps/api/geocode/json?address={}".format(
         place)
-    response = urllib2.urlopen(url)
-    jsonF = json.loads(response.read())
+    response = requests.get(url)
+    jsonF = response.json()
     if jsonF['status'] == "OK":
         lat = jsonF['results'][0]['geometry']['location']['lat']
         lng = jsonF['results'][0]['geometry']['location']['lng']
@@ -34,55 +34,18 @@ def get_latlng(place):
         return None
 
 
-def store_shape(path, shape_name, placeDic):
+def store_shape(shape_name, schema, data):
     """Stores `placeDic` as ESRI Shapefile at `path`
 
     Args:
         path (str): path to store shapefile at
-        placeDic (dict): dictionary which looks like
-            {'<placename': {'lat': <lat>}, 'lng': <lng> }
+        schema (dict): dictionary describing the schema of the data
+        data (list): list of dicts which look like schema which will be
+            stored to shapefile
     """
-    spatialReference = osr.SpatialReference()
-    spatialReference.ImportFromEPSG(4326)  # WGS84 degrees coordinates
-    # will select the driver for our shp-file creation.
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    # so there we will store our data
-    shapeData = driver.CreateDataSource(path)
-    # this will create a corresponding layer for our data with given
-    # spatial information.
-    layer = shapeData.CreateLayer(shape_name, spatialReference, ogr.wkbPoint)
-    # gets parameters of the current shapefile
-    layer_defn = layer.GetLayerDefn()
-    new_field = ogr.FieldDefn('PLACE', ogr.OFTString)
-    layer.CreateField(new_field)
-    point = ogr.Geometry(ogr.wkbPoint)
-    i = 0
-    for place in placeDic:
-        # create a new point at given ccordinates
-        point.AddPoint(placeDic[place]['lng'], placeDic[place]['lat'])
-        featureIndex = i
-        feature = ogr.Feature(layer_defn)
-        feature.SetGeometry(point)
-        feature.SetFID(featureIndex)
-        j = feature.GetFieldIndex("PLACE")
-        feature.SetField(j, place)
-        layer.CreateFeature(feature)
-        i += 1
-    shapeData.Destroy()  # lets close the shapefile
-
-
-def remove_shape(path, file_name):
-    """Removes shapefile `filename` at `path`.
-
-    Args:
-        path (str): path the shapefile is stored at
-        file_name (str): name of shapefile
-    """
-    # removes the exsisting shapefile
-    extensions = ["shp", "shx", "prj", "dbf"]
-    for extension in extensions:
-        command = "rm " + path + file_name + "." + extension
-        os.system(command)
+    with collection(shape_name, "w", "ESRI Shapefile", schema) as output:
+        for row in data:
+            output.write(row)
 
 
 def read_txt(txt_file):
@@ -107,9 +70,14 @@ def places_to_shape():
     path = os.path.dirname(os.path.realpath(__file__)) + "/"
     txt_file = "places.txt"
     txt_file_root = txt_file[:-4]
+    output_shape = os.path.join(path, txt_file_root + '.shp')
 
-    # dictionary where all the coordinates and places will be stored in
-    placeDic = {}
+    # list where results will be stored
+    results = []
+
+    # our result will look like this
+    schema = {'geometry': 'Point',
+              'properties': {'place': 'str'}}
 
     # read from source
     places = read_txt(txt_file)
@@ -119,13 +87,12 @@ def places_to_shape():
         place = place.strip()
         latlng = get_latlng(place)
         print place, latlng
-        placeDic[place] = latlng
-
-    # remove shape, if exists
-    remove_shape(path, txt_file_root)
+        point_geom = Point(float(latlng['lng']), float(latlng['lat']))
+        results.append({'geometry': mapping(point_geom),
+                        'properties': {'place': place}})
 
     # store results
-    store_shape(path, txt_file_root, placeDic)
+    store_shape(output_shape, schema, results)
 
 
 if __name__ == "__main__":
