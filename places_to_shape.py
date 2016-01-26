@@ -63,17 +63,22 @@ def remove_shape(path, fileName):
         os.system(command)
 
 
+def read_txt(txt_file):
+    with open(txt_file) as f:
+        return f.readlines()
+
+
 def places_to_shape():
     # dictionary where all the coordinates and places will be stored in
+    txt_file = "places.txt"
     placeDic = {}
-    with open("places.txt") as f:
-        for line in f:
-            lineSplit = line.split(',')
-            for place in lineSplit:
-                lat, lng = get_latlng(place.strip())
-                placeDic[place.strip()] = {
-                    'lat': lat,
-                    'lng': lng}
+    places = read_txt(txt_file)
+    for place in places:
+        place = place.strip()
+        lat, lng = get_latlng(place)
+        print place, lat, lng
+        placeDic[place] = {'lat': lat, 'lng': lng}
+
     store_shape(placeDic)
 
 
